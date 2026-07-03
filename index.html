@@ -1,125 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Cloner Dashboard</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f3f4f6;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        .widget {
-            background: white;
-            padding: 32px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 440px;
-            box-sizing: border-box;
-        }
-        h2 { margin-top: 0; color: #111827; font-size: 24px; font-weight: 700; text-align: center;}
-        textarea {
-            width: 100%;
-            height: 120px;
-            padding: 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 16px;
-            resize: none;
-            box-sizing: border-box;
-            margin-bottom: 16px;
-            outline: none;
-        }
-        textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
-        button {
-            width: 100%;
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover { background-color: #1d4ed8; }
-        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        .audio-wrapper { margin-top: 24px; display: none; text-align: center; }
-        audio { width: 100%; }
-        .log-status { font-size: 14px; color: #4b5563; text-align: center; margin-top: 12px; min-height: 20px;}
-    </style>
-</head>
-<body>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chat with Me</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"><style>  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }  :root {    --bg: #0d0d0f; --surface: #16161a; --border: rgba(255,255,255,0.08);    --accent: #c8a96e; --text: #e8e4dc; --muted: rgba(232,228,220,0.45);    --user-bg: #1e2533; --bot-bg: #1a1a1e; --radius: 18px;    --font-head: 'DM Serif Display', Georgia, serif;    --font-body: 'DM Sans', system-ui, sans-serif;  }  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }  .shell { display: grid; grid-template-columns: 320px 1fr; grid-template-rows: 100vh; max-width: 1100px; margin: 0 auto; }  .sidebar { border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem; gap: 1.5rem; position: relative; overflow: hidden; }  .sidebar::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(200,169,110,0.07) 0%, transparent 70%); pointer-events: none; }    .avatar-wrap { position: relative; width: 220px; height: 290px; }    .avatar-ring { position: absolute; inset: -6px; border-radius: 16px; border: 1.5px solid var(--accent); opacity: 0.3; animation: pulse-ring 2.8s ease-in-out infinite; }  .avatar-ring.r2 { inset: -12px; opacity: 0.1; animation-delay: 0.6s; }  @keyframes pulse-ring { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.03); opacity: 0.1; } }    .avatar-img {     width: 220px;     height: 290px;     border-radius: 16px;     object-fit: cover;     object-position: center center;     border: 1.5px solid rgba(200, 169, 110, 0.4);     display: block;     background: var(--surface);     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);  }    .speaking-badge { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }  .speaking-badge.active { display: flex; }  .speaking-dots { display: flex; gap: 3px; }  .speaking-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); animation: bounce-dot 1s ease-in-out infinite; }  .speaking-dots span:nth-child(2) { animation-delay: 0.15s; }  .speaking-dots span:nth-child(3) { animation-delay: 0.30s; }  @keyframes bounce-dot { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }  .bot-name { font-family: var(--font-head); font-size: 1.6rem; color: var(--text); text-align: center; }  .bot-tagline { font-size: 13px; color: var(--muted); text-align: center; max-width: 220px; line-height: 1.5; }  .voice-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px; transition: border-color 0.2s, color 0.2s; }  .voice-toggle:hover { border-color: var(--accent); color: var(--accent); }  .voice-toggle input { display: none; }  .voice-toggle.on { border-color: var(--accent); color: var(--accent); }    .delay-note { font-size: 12px; color: var(--muted); text-align: center; max-width: 200px; line-height: 1.4; font-style: italic; margin-top: -4px; }
+  .chat-panel { display: flex; flex-direction: column; height: 100vh; }  .chat-header { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }  .messages { flex: 1; overflow-y: auto; padding: 1.75rem; display: flex; flex-direction: column; gap: 1rem; scroll-behavior: smooth; }  .messages::-webkit-scrollbar { width: 4px; }  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }  .msg { display: flex; flex-direction: column; max-width: 78%; gap: 4px; animation: msg-in 0.25s ease-out both; }  @keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }  .msg.user { align-self: flex-end; align-items: flex-end; }  .msg.bot  { align-self: flex-start; align-items: flex-start; }  .bubble { padding: 0.75rem 1.1rem; border-radius: var(--radius); font-size: 15px; line-height: 1.65; }  .msg.user .bubble { background: var(--user-bg); border-bottom-right-radius: 4px; border: 1px solid rgba(126,159,199,0.2); }  .msg.bot  .bubble { background: var(--bot-bg); border-bottom-left-radius: 4px; border: 1px solid var(--border); }  .msg-time { font-size: 11px; color: var(--muted); padding: 0 4px; }    .replay-btn { font-size: 11px; color: var(--accent); background: none; border: 1px solid rgba(200, 169, 110, 0.3); border-radius: 99px; padding: 3px 10px; cursor: pointer; margin-top: 6px; width: fit-content; transition: background 0.15s, border-color 0.15s; display: none; align-items: center; gap: 4px; }  .replay-btn.visible { display: flex; }  .replay-btn:hover { background: rgba(200, 169, 110, 0.1); border-color: var(--accent); }
+  .typing-bubble { background: var(--bot-bg); border: 1px solid var(--border); border-radius: var(--radius); border-bottom-left-radius: 4px; padding: 0.75rem 1.1rem; display: none; align-items: center; gap: 5px; width: fit-content; }  .typing-bubble.visible { display: flex; }  .typing-bubble span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce-dot 1s ease-in-out infinite; }  .typing-bubble span:nth-child(2) { animation-delay: 0.15s; }  .typing-bubble span:nth-child(3) { animation-delay: 0.30s; }  .gen-voice { font-size: 12px; color: var(--muted); padding: 4px 8px; display: none; }  .gen-voice.visible { display: block; }  .input-bar { padding: 1.25rem 1.75rem; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; background: var(--bg); }  .input-bar { padding: 1.25rem 1.75rem; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; background: var(--bg); }  .input-wrap { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0.65rem 1rem; display: flex; align-items: flex-end; gap: 8px; transition: border-color 0.2s; }  .input-wrap:focus-within { border-color: rgba(200,169,110,0.4); }  #user-input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font-body); font-size: 15px; resize: none; max-height: 120px; min-height: 24px; line-height: 1.5; }  #user-input::placeholder { color: var(--muted); }  .send-btn { width: 38px; height: 38px; border-radius: 10px; border: none; background: var(--accent); color: #0d0d0f; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s, transform 0.1s; font-size: 18px; }  .send-btn:hover { opacity: 0.85; }  .send-btn:active { transform: scale(0.95); }  .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }  @media (max-width: 660px) {    .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: 100vh; }    .sidebar { flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; gap: 1rem; justify-content: flex-start; }    .avatar-wrap { width: 56px; height: 56px; flex-shrink: 0; }    .avatar-img { width: 56px; height: 56px; border-radius: 8px; }    .avatar-ring, .avatar-ring.r2 { display: none; }    .bot-tagline, .voice-toggle, .speaking-badge, .delay-note { display: none !important; }    .bot-name { font-size: 1.1rem; }    .chat-panel { height: 0; min-height: 0; }  }</style></head><body><div class="shell">  <aside class="sidebar">    <div class="avatar-wrap">      <div class="avatar-ring"></div>      <div class="avatar-ring r2"></div>      <img id="avatar-static" class="avatar-img" src="me.jpg"           onerror="this.style.background='#2a2a30';this.src=''" alt="Avatar">    </div>    <div class="speaking-badge" id="speaking-badge">      <div class="speaking-dots"><span></span><span></span><span></span></div>      Speaking    </div>    <div>      <h1 class="bot-name">Papa Jerry</h1>      <p class="bot-tagline">Ask me anything — I'm here to help.</p>    </div>    <label class="voice-toggle on" id="voice-toggle">      <input type="checkbox" id="voice-on" checked>      🔊 Voice on    </label>    <div class="delay-note">      voice generation takes a few seconds - please be patient    </div>  </aside>  <main class="chat-panel">    <div class="chat-header">Conversation</div>    <div class="messages" id="messages">      <div class="msg bot">        <div class="bubble">Hey there! 👋 I'm here and ready to chat. Ask me anything you'd like.</div>        <span class="msg-time" id="greeting-time"></span>      </div>      <div class="typing-bubble" id="typing">        <span></span><span></span><span></span>      </div>      <div class="gen-voice" id="gen-voice">🎙️ Generating voice...</div>    </div>    <div class="input-bar">      <div class="input-wrap">        <textarea id="user-input" rows="1" placeholder="Type a message…"></textarea>      </div>      <button class="send-btn" id="send-btn" title="Send">&#10148;</button>    </div>  </main></div><audio id="tts-audio" style="display:none"></audio><script>
+// ============================================================
+// CHANGE THESE ASSIGNMENTS TO MATCH YOUR LIVE SPACE CREDENTIALS
+// ============================================================
+var MY_HF_USERNAME = 'zaksix6';
+var MY_SPACE_NAME  = 'my-voice';
+// ============================================================
 
-<div class="widget">
-    <h2>Clone My Voice</h2>
-    <textarea id="textPayload" placeholder="Type anything here..."></textarea>
-    <button id="triggerBtn" onclick="sendSpeechRequest()">Generate Voice Output</button>
-    
-    <div id="logStatus" class="log-status"></div>
+var MY_SPACE_API   = 'https://' + MY_HF_USERNAME + '-' + MY_SPACE_NAME + '.hf.space/chat';
+var MY_SPACE_AUDIO = 'https://' + MY_HF_USERNAME + '-' + MY_SPACE_NAME + '.hf.space/audio';
 
-    <div id="audioWrapper" class="audio-wrapper">
-        <audio id="audioOutlet" controls></audio>
-    </div>
-</div>
+var chatHistory = [];var busy = false;var currentBotMsgId = null;
+var msgsEl      = document.getElementById('messages');var inputEl     = document.getElementById('user-input');var sendBtn     = document.getElementById('send-btn');var typing      = document.getElementById('typing');var genVoiceEl  = document.getElementById('gen-voice');var voiceOn     = document.getElementById('voice-on');var voiceToggle = document.getElementById('voice-toggle');var speakBadge  = document.getElementById('speaking-badge');var ttsAudio    = document.getElementById('tts-audio');
+document.getElementById('greeting-time').textContent = _time();
 
-<script>
-    // ⚠️ UPDATE THIS WITH YOUR LIVE DEPLOYED RENDER URL STRING
-    const RENDER_BACKEND_URL = "https://your-app-name.onrender.com";
+voiceOn.addEventListener('change', function() {  voiceToggle.classList.toggle('on', voiceOn.checked);  voiceToggle.lastChild.textContent = voiceOn.checked ? ' Voice on' : ' Voice off';});
+inputEl.addEventListener('input', function() {  this.style.height = 'auto';  this.style.height = Math.min(this.scrollHeight, 120) + 'px';});
+inputEl.addEventListener('keydown', function(e) {  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }});
+sendBtn.addEventListener('click', send);
 
-    async function sendSpeechRequest() {
-        const textPayload = document.getElementById('textPayload').value.trim();
-        const triggerBtn = document.getElementById('triggerBtn');
-        const logStatus = document.getElementById('logStatus');
-        const audioWrapper = document.getElementById('audioWrapper');
-        const audioOutlet = document.getElementById('audioOutlet');
+function send() {  var text = inputEl.value.trim();  if (!text || busy) return;  addMessage('user', text);  chatHistory.push({ role: 'user', content: text });  inputEl.value = '';  inputEl.style.height = 'auto';  setTyping(true);  busy = true;  sendBtn.disabled = true;  currentBotMsgId = 'msg-' + Date.now();
 
-        if (!textPayload) {
-            alert("Please type some text first!");
-            return;
-        }
+  fetch(MY_SPACE_API, {    method: 'POST',    headers: { 'Content-Type': 'application/json' },    body: JSON.stringify({ message: text, history: chatHistory.slice(0, -1) })  })  .then(function(r) {     if (!r.ok) throw new Error("Backend server error");    return r.json();   })  .then(function(data) {    setTyping(false);    chatHistory.push({ role: 'assistant', content: data.text });    addMessage('bot', data.text, currentBotMsgId);        if (voiceOn.checked) {      var uniqueAudioUrl = MY_SPACE_AUDIO + '?t=' + Date.now();      setupReplayButton(currentBotMsgId, uniqueAudioUrl);      playAudio(uniqueAudioUrl);    } else {      done();    }  })  .catch(function(err) {    setTyping(false);    addMessage('bot', 'Connection error: ' + err.message);    done();  });}
 
-        triggerBtn.disabled = true;
-        triggerBtn.innerText = "Processing Text...";
-        logStatus.innerText = "Processing... (May take 30s if waking up)";
-        audioWrapper.style.display = "none";
+function playAudio(src) {  if (busy && !ttsAudio.paused) { ttsAudio.pause(); }  speakBadge.classList.add('active');  ttsAudio.src = src;  ttsAudio.play();  ttsAudio.onended = function() { speakBadge.classList.remove('active'); done(); };  ttsAudio.onerror = function() { speakBadge.classList.remove('active'); done(); };}
+function done() { busy = false; sendBtn.disabled = false; inputEl.focus(); }
 
-        try {
-            // Note: The native binary exposes /generate as its synthesis route
-            const apiResponse = await fetch(`${RENDER_BACKEND_URL}/generate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: textPayload })
-            });
+function addMessage(role, text, elementId) {  var msg = document.createElement('div');  msg.className = 'msg ' + role;  if (elementId) msg.id = elementId;  var bubble = document.createElement('div');  bubble.className = 'bubble';  bubble.textContent = text;  var time = document.createElement('span');  time.className = 'msg-time';  time.textContent = _time();  msg.appendChild(bubble);  msg.appendChild(time);    if (role === 'bot') {    var replayBtn = document.createElement('button');    replayBtn.className = 'replay-btn';    replayBtn.innerHTML = '▶️ Replay Voice';    msg.appendChild(replayBtn);  }  msgsEl.insertBefore(msg, typing);  msgsEl.scrollTop = msgsEl.scrollHeight;}
 
-            if (!apiResponse.ok) {
-                throw new Error("The synthesis engine returned a bad response code.");
-            }
-
-            const binaryBlob = await apiResponse.blob();
-            const playbackUrl = URL.createObjectURL(binaryBlob);
-            
-            audioOutlet.src = playbackUrl;
-            audioWrapper.style.display = "block";
-            logStatus.innerText = "Voice successfully cloned!";
-            audioOutlet.play();
-
-        } catch (err) {
-            console.error(err);
-            logStatus.innerText = "Error: Generation failed. Check your Render logs.";
-        } finally {
-            triggerBtn.disabled = false;
-            triggerBtn.innerText = "Generate Voice Output";
-        }
-    }
-</script>
-
-</body>
-</html>
+function setupReplayButton(elementId, audioSrc) {  var targetMsg = document.getElementById(elementId);  if (!targetMsg) return;  var btn = targetMsg.querySelector('.replay-btn');  if (!btn) return;  btn.onclick = function() {    speakBadge.classList.add('active');    ttsAudio.src = audioSrc;    ttsAudio.play();    ttsAudio.onended = function() { speakBadge.classList.remove('active'); };    ttsAudio.onerror = function() { speakBadge.classList.remove('active'); };  };  btn.classList.add('visible');}
+function setTyping(show) { typing.classList.toggle('visible', show); msgsEl.scrollTop = msgsEl.scrollHeight;}
+function _time() {  var d = new Date(), h = d.getHours(), m = d.getMinutes();  var ampm = h >= 12 ? 'pm' : 'am';  h = h % 12 || 12;  return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;}</script></body></html>
