@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Cloner Web Page</title>
+    <title>Voice Cloner Dashboard</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f3f4f6;
             margin: 0;
             display: flex;
@@ -60,7 +60,7 @@
 
 <div class="widget">
     <h2>Clone My Voice</h2>
-    <textarea id="textPayload" placeholder="Type anything here to make your cloned voice speak it..."></textarea>
+    <textarea id="textPayload" placeholder="Type anything here..."></textarea>
     <button id="triggerBtn" onclick="sendSpeechRequest()">Generate Voice Output</button>
     
     <div id="logStatus" class="log-status"></div>
@@ -71,7 +71,7 @@
 </div>
 
 <script>
-    // ⚠️ REPLACE THIS STRING VALUE WITH YOUR DEPLOYED RENDER APPLICATION URL
+    // ⚠️ UPDATE THIS WITH YOUR LIVE DEPLOYED RENDER URL STRING
     const RENDER_BACKEND_URL = "https://your-app-name.onrender.com";
 
     async function sendSpeechRequest() {
@@ -88,11 +88,12 @@
 
         triggerBtn.disabled = true;
         triggerBtn.innerText = "Processing Text...";
-        logStatus.innerText = "Contacting Render engine... (May take 30s if waking up)";
+        logStatus.innerText = "Processing... (May take 30s if waking up)";
         audioWrapper.style.display = "none";
 
         try {
-            const apiResponse = await fetch(`${RENDER_BACKEND_URL}/clone`, {
+            // Note: The native binary exposes /generate as its synthesis route
+            const apiResponse = await fetch(`${RENDER_BACKEND_URL}/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: textPayload })
