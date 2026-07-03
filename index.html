@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Cloner Web Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .widget {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 440px;
+            box-sizing: border-box;
+        }
+        h2 { margin-top: 0; color: #111827; font-size: 24px; font-weight: 700; text-align: center;}
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: none;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+            outline: none;
+        }
+        textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+        button {
+            width: 100%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #1d4ed8; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .audio-wrapper { margin-top: 24px; display: none; text-align: center; }
+        audio { width: 100%; }
+        .log-status { font-size: 14px; color: #4b5563; text-align: center; margin-top: 12px; min-height: 20px;}
+    </style>
+</head>
+<body>
+
+<div class="widget">
+    <h2>Clone My Voice</h2>
+    <textarea id="textPayload" placeholder="Type anything here to make your cloned voice speak it..."></textarea>
+    <button id="triggerBtn" onclick="sendSpeechRequest()">Generate Voice Output</button>
+    
+    <div id="logStatus" class="log-status"></div>
+
+    <div id="audioWrapper" class="audio-wrapper">
+        <audio id="audioOutlet" controls></audio>
+    </div>
+</div>
+
+<script>
+    // ⚠️ REPLACE THIS STRING VALUE WITH YOUR DEPLOYED RENDER APPLICATION URL
+    const RENDER_BACKEND_URL = "https://your-app-name.onrender.com";
+
+    async function sendSpeechRequest() {
+        const textPayload = document.getElementById('textPayload').value.trim();
+        const triggerBtn = document.getElementById('triggerBtn');
+        const logStatus = document.getElementById('logStatus');
+        const audioWrapper = document.getElementById('audioWrapper');
+        const audioOutlet = document.getElementById('audioOutlet');
+
+        if (!textPayload) {
+            alert("Please type some text first!");
+            return;
+        }
+
+        triggerBtn.disabled = true;
+        triggerBtn.innerText = "Processing Text...";
+        logStatus.innerText = "Contacting Render engine... (May take 30s if waking up)";
+        audioWrapper.style.display = "none";
+
+        try {
+            const apiResponse = await fetch(`${RENDER_BACKEND_URL}/clone`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: textPayload })
+            });
+
+            if (!apiResponse.ok) {
+                throw new Error("The synthesis engine returned a bad response code.");
+            }
+
+            const binaryBlob = await apiResponse.blob();
+            const playbackUrl = URL.createObjectURL(binaryBlob);
+            
+            audioOutlet.src = playbackUrl;
+            audioWrapper.style.display = "block";
+            logStatus.innerText = "Voice successfully cloned!";
+            audioOutlet.play();
+
+        } catch (err) {
+            console.error(err);
+            logStatus.innerText = "Error: Generation failed. Check your Render logs.";
+        } finally {
+            triggerBtn.disabled = false;
+            triggerBtn.innerText = "Generate Voice Output";
+        }
+    }
+</script>
+
+</body>
+</html>
