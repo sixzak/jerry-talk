@@ -1,22 +1,22 @@
 FROM python:3.10-slim
 
+# Install necessary system-level compilation and audio codecs
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y ffmpeg git wget && rm -rf /var/lib/apt/lists/*
+# Copy all local repository files into the docker image
+COPY . /app
 
-# Pulls the official OpenVoice project code directly into your server
-RUN git clone https://github.com .
+# Install lightweight CPU-optimized PyTorch and dependencies
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir pocket-tts fastapi uvicorn scipy
 
-RUN pip install -e .
-RUN pip install fastapi uvicorn pydantic
+EXPOSE 10000
 
-RUN mkdir -p checkpoints/converter
-
-# Pulls the official audio converter files into your server
-RUN wget -O checkpoints/converter/checkpoint.pth https://github.com
-RUN wget -O checkpoints/converter/config.json https://github.com
-
-COPY reference_speaker.wav .
-COPY main.py .
-
-CMD ["uvicorn", "main.py:app", "--host", "0.0.0.0", "--port", "10000"]
+# Fire up the production server
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
