@@ -1,22 +1,30 @@
-FROM python:3.10-slim
+# Stage 1: Build the optimized Rust executable
+FROM rust:1.75-slim AS builder
 
-# Install necessary system-level compilation and audio codecs
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsndfile1 \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git libsndfile1-dev pkg-config build-essential && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/app
+
+# Clone the native low-footprint implementation of the model
+RUN git clone https://github.com/kyutai-labs/pocket-tts.git .
+
+# Build the production release artifact
+RUN cargo build --release -p pocket-tts-cli
+
+# Stage 2: Minimal runtime footprint execution layer
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y libsndfile1 ffmpeg && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy all local repository files into the docker image
-COPY . /app
+# Copy executable from builder
+COPY --from=builder /usr/src/app/target/release/pocket-tts /usr/local/bin/pocket-tts
 
-# Install lightweight CPU-optimized PyTorch and dependencies
-RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir pocket-tts fastapi uvicorn scipy
+# Copy local repository files (handles your HTML and custom voice sample)
+COPY . /app
 
 EXPOSE 10000
 
-# Fire up the production server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Start the native HTTP engine natively using less than 100MB of RAM
+CMD ["pocket-tts", "serve", "--host", "0.0.0.0", "--port", "10000", "--voice", "my-voice.wav"]
