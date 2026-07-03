@@ -1,30 +1,19 @@
-# Stage 1: Build the optimized Rust executable
-FROM rust:1.75-slim AS builder
+FROM python:3.10-slim
 
-RUN apt-get update && apt-get install -y git libsndfile1-dev pkg-config build-essential && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /usr/src/app
-
-# Clone the native low-footprint implementation of the model
-RUN git clone https://github.com/kyutai-labs/pocket-tts.git .
-
-# Build the production release artifact
-RUN cargo build --release -p pocket-tts-cli
-
-# Stage 2: Minimal runtime footprint execution layer
-FROM debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y libsndfile1 ffmpeg && rm -rf /var/lib/apt/lists/*
+# Install system utilities necessary for media pipelines
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy executable from builder
-COPY --from=builder /usr/src/app/target/release/pocket-tts /usr/local/bin/pocket-tts
+# Ensure PyTorch CPU wheels install smoothly before layering logic packages
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir omnivoice fastapi uvicorn pydub groq pydantic soundfile
 
-# Copy local repository files (handles your HTML and custom voice sample)
-COPY . /app
+COPY . .
 
-EXPOSE 10000
+EXPOSE 7860
 
-# Start the native HTTP engine natively using less than 100MB of RAM
-CMD ["pocket-tts", "serve", "--host", "0.0.0.0", "--port", "10000", "--voice", "my-voice.wav"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
