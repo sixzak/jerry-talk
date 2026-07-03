@@ -1,105 +1,68 @@
 import os
+import scipy.io.wavfile
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from melo.api import TTS
-from openvoice import se_extractor
-from openvoice.api import ToneColorConverter
+from pocket_tts import TTSModel
 
 app = FastAPI()
 
-class VoiceRequest(BaseModel):
+# Enable Global Cross-Origin Resource Sharing (CORS) so your GitHub Page can talk to it
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global memory variables for caching the model and your voice state
+tts_model = None
+voice_state = None
+REFERENCE_VOICE = "my-voice.wav"
+OUTPUT_FILE = "output.wav"
+
+@app.on_event("startup")
+def initialize_cloned_voice():
+    global tts_model, voice_state
+    try:
+        print("Loading lightweight 100M-parameter TTS Model...")
+        tts_model = TTSModel.load_model()
+        
+        if not os.path.exists(REFERENCE_VOICE):
+            print(f"CRITICAL ERROR: {REFERENCE_VOICE} is missing from the directory!")
+            return
+            
+        print("Extracting acoustic properties from your reference sample...")
+        # Extracts voice signature once on startup to optimize speed
+        voice_state = tts_model.get_state_for_audio_prompt(REFERENCE_VOICE)
+        print("Voice successfully cloned. Server is online!")
+    except Exception as e:
+        print(f"Initialization failure: {str(e)}")
+
+class TextRequest(BaseModel):
     text: str
 
-# 1. Pre-load the lightweight voice cloning models into memory
-ckpt_converter = 'checkpoints/converter'
-tone_color_converter = ToneColorConverter(f'{ckpt_converter}/config.json', device='cpu')
-tone_color_converter.load_checkpoint(f'{ckpt_converter}/checkpoint.pth')
-
-# 2. Extract unique voice features from your sample at startup
-target_se, audio_name = se_extractor.get_se('reference_speaker.wav', tone_color_converter, target_dir='processed')
-
-# 3. Visual Interface (The Webpage that plays audio automatically)
-@app.get("/", response_class=HTMLResponse)
-async def read_item():
-    return """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Instant Free Voice Clone</title>
-        <style>
-            body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f4f4f9; margin: 0; }
-            .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
-            input { width: 90%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-            button { background: #4CAF50; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-            button:hover { background: #45a049; }
-            #status { margin-top: 15px; color: #666; font-size: 14px; }
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <h2>Voice Cloner</h2>
-            <p>Type text below to hear it in your cloned voice.</p>
-            <input type="text" id="textInput" placeholder="Type here..." value="Hello! This is running completely free on Render.">
-            <button onclick="speak()">Speak Out Loud</button>
-            <div id="status"></div>
-        </div>
-
-        <script>
-            async function speak() {
-                const textInput = document.getElementById('textInput').value;
-                const status = document.getElementById('status');
-                if(!textInput) return alert('Please enter some text!');
-                
-                status.innerText = "Generating voice clone... (takes a few seconds)";
-                
-                try {
-                    const response = await fetch('/clone', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: textInput })
-                    });
-
-                    if(!response.ok) throw new Error('Generation failed');
-
-                    const blob = await response.blob();
-                    const audioUrl = URL.createObjectURL(blob);
-                    const audio = new Audio(audioUrl);
-                    
-                    status.innerText = "Playing audio!";
-                    audio.play();
-                } catch(e) {
-                    status.innerText = "Error generating audio.";
-                    console.error(e);
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
-
-# 4. Backend Processing Engine
 @app.post("/clone")
-async def clone_voice(payload: VoiceRequest):
+def generate_voice(request: TextRequest):
+    if tts_model is None or voice_state is None:
+        raise HTTPException(status_code=500, detail="The AI engine failed to load or reference voice is missing.")
+    
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+        
     try:
-        # Step A: Generate basic text-to-speech
-        model = TTS(language='EN', device='cpu')
-        speaker_ids = model.hps.data.spk2id
-        base_output = "base_temp.wav"
-        model.tts_to_file(payload.text, speaker_ids['EN-Default'], base_output, speed=1.0)
+        # Run text inference through your cached cloned voice profile
+        audio_tensor = tts_model.generate_audio(voice_state, request.text)
         
-        # Step B: Transform the baseline audio into your reference voice tone
-        src_se, _ = se_extractor.get_se(base_output, tone_color_converter, target_dir='processed')
-        final_output = "cloned_output.wav"
+        # Save generated tensor directly to a standard wav audio file
+        scipy.io.wavfile.write(OUTPUT_FILE, tts_model.sample_rate, audio_tensor.numpy())
         
-        tone_color_converter.convert(
-            model_src=base_output, 
-            src_se=src_se, 
-            tgt_se=target_se, 
-            output_path=final_output
-        )
-        
-        return FileResponse(final_output, media_type="audio/wav")
+        return FileResponse(OUTPUT_FILE, media_type="audio/wav", filename="cloned_voice.wav")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/")
+def health():
+    return {"status": "operational"}
